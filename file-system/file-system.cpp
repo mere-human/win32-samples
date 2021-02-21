@@ -4,11 +4,9 @@
 #include "framework.h"
 #include "file-system.h"
 #include <shlwapi.h>
-#include <array>
-#include <functional>
+#include <array>    // size
 
 #define MAX_LOADSTRING 100
-#define NAME_COMMA_STRING(name) name, _T((#name))
 
 // Global Variables:
 HINSTANCE hInst;                                // current instance
@@ -187,6 +185,8 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
+// Message handler for "Check Path" dialog.
+// TODO: use a list box?
 INT_PTR CALLBACK CheckPathDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
     UNREFERENCED_PARAMETER(lParam);
@@ -240,6 +240,19 @@ INT_PTR CALLBACK CheckPathDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
                 else
                 {
                     _stprintf_s(buffer, _T("PathCanonicalize: ?"));
+                }
+                SetWindowText(hChild, buffer);
+            }
+            hChild = GetDlgItem(hDlg, IDC_STATIC_CURR_DIR);
+            if (hChild)
+            {
+                if (GetCurrentDirectory(std::size(path), path) != 0)
+                {
+                    _stprintf_s(buffer, _T("GetCurrentDirectory: %s"), path);
+                }
+                else
+                {
+                    _stprintf_s(buffer, _T("GetCurrentDirectory: ?"));
                 }
                 SetWindowText(hChild, buffer);
             }

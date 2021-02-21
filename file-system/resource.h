@@ -19,11 +19,11 @@
 #define IDC_STATIC_IS_NET_PATH          1004
 #define IDC_STATIC_IS_REL               1005
 #define IDC_STATIC_IS_ROOT              1006
-#define IDC_STATIC_IS_SYS_FOLDR         1007
 #define IDC_STATIC_IS_UNC               1008
 #define IDC_STATIC_IS_URL               1009
-#define IDC_STATIC_IS_URL2              1010
 #define IDC_STATIC_PATH_CANON           1010
+#define IDC_STATIC_IS_URL2              1011
+#define IDC_STATIC_CURR_DIR             1011
 #define ID_FILE_PATH                    32771
 #define IDM_FILE_PATH                   32772
 #define IDC_STATIC                      -1

@@ -147,7 +147,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="file-system.cpp" />
-    <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="file-system.rc" />
