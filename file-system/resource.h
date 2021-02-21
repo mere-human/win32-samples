@@ -22,8 +22,9 @@
 #define IDC_STATIC_IS_UNC               1008
 #define IDC_STATIC_IS_URL               1009
 #define IDC_STATIC_PATH_CANON           1010
-#define IDC_STATIC_IS_URL2              1011
 #define IDC_STATIC_CURR_DIR             1011
+#define IDC_STATIC_CURR_DIR2            1012
+#define IDC_STATIC_FULL_PATH            1012
 #define ID_FILE_PATH                    32771
 #define IDM_FILE_PATH                   32772
 #define IDC_STATIC                      -1

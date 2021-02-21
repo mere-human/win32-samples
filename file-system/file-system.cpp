@@ -191,6 +191,7 @@ INT_PTR CALLBACK CheckPathDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
 {
     UNREFERENCED_PARAMETER(lParam);
     static TCHAR buffer[MAX_PATH] = {};
+    static TCHAR buffer2[MAX_PATH] = {};
     static TCHAR path[MAX_PATH] = {};
     switch (message)
     {
@@ -228,14 +229,25 @@ INT_PTR CALLBACK CheckPathDlgProc(HWND hDlg, UINT message, WPARAM wParam, LPARAM
                     SetWindowText(hChild, buffer);
                 }
             }
-            // Should be the last because path is overriden here
+            hChild = GetDlgItem(hDlg, IDC_STATIC_FULL_PATH);
+            if (hChild)
+            {
+                TCHAR** lppPart = { NULL };
+				if (GetFullPathName(path, std::size(path), buffer2, lppPart) != 0)
+                {
+                    _stprintf_s(buffer, _T("GetFullPathName: %s"), buffer2);
+                }
+                else
+                {
+                    _stprintf_s(buffer, _T("GetFullPathName: ?"));
+                }
+            }
             hChild = GetDlgItem(hDlg, IDC_STATIC_PATH_CANON);
             if (hChild)
             {
-                if (PathCanonicalize(buffer, path))
+                if (PathCanonicalize(buffer2, path))
                 {
-                    _tcsncpy_s(path, buffer, std::size(path));
-                    _stprintf_s(buffer, _T("PathCanonicalize: %s"), path);
+                    _stprintf_s(buffer, _T("PathCanonicalize: %s"), buffer2);
                 }
                 else
                 {
