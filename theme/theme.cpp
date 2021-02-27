@@ -6,6 +6,7 @@
 #include <array>
 #include <uxtheme.h>
 #include <vssym32.h>	// BP_PUSHBUTTON, etc
+#include <map>
 
 #define MAX_LOADSTRING 100
 
@@ -13,6 +14,8 @@
 HINSTANCE hInst;                                // current instance
 WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
 WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
+
+std::map<int, COLORREF> g_themeColors;
 
 // Forward declarations of functions included in this code module:
 ATOM                MyRegisterClass(HINSTANCE hInstance);
@@ -168,11 +171,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 bool DrawMyButton(HDC hDC, RECT rcPaint, HWND hwnd)
 {
-	const COLORREF rgbBlack = 0x00000000;
-	const COLORREF rgbWhite = 0x00FFFFFF;
-
-	COLORREF textColor = rgbWhite;
-
 	int state = SendMessage(hwnd, BM_GETSTATE, 0, 0);
 	int partState = 0;
 	if (state & BST_FOCUS)
@@ -183,30 +181,30 @@ bool DrawMyButton(HDC hDC, RECT rcPaint, HWND hwnd)
 		partState |= PBS_PRESSED;
 	if (partState == 0)
 		partState = PBS_NORMAL;
+	if (!IsWindowEnabled(hwnd))
+		partState |= PBS_DISABLED;
 
 	HRESULT hr = S_OK;
 	HTHEME hTheme = OpenThemeData(hwnd, L"button");
 	if (hTheme)
 	{
-		RECT rcInter = {};
+		hr = DrawThemeParentBackground(hwnd, hDC, &rcPaint);
+
+		hr = DrawThemeBackground(hTheme, hDC, BP_PUSHBUTTON, partState, &rcPaint, NULL);
 
 		hr = DrawThemeEdge(hTheme, hDC, BP_PUSHBUTTON, partState,
-			&rcPaint, EDGE_RAISED, BF_RECT | BF_ADJUST, &rcInter);
-
-		DTBGOPTS opts2 = {};
-		opts2.dwSize = sizeof(opts2);
-		hr = DrawThemeBackgroundEx(hTheme, hDC, BP_PUSHBUTTON, partState, &rcInter, &opts2);
+			&rcPaint, EDGE_RAISED, BF_RECT | ((state & BST_PUSHED) ? BF_FLAT : 0), NULL);
 
 		DTTOPTS opts = {};
 		opts.dwSize = sizeof(opts);
-		opts.crText = textColor;
+		opts.crText = g_themeColors[COLOR_BTNTEXT];
 		opts.dwFlags |= DTT_TEXTCOLOR;
 		WCHAR caption[MAX_PATH];
 		GetWindowText(hwnd, caption, std::size(caption));
 		size_t cch = _tcslen(caption);
 		hr = DrawThemeTextEx(hTheme, hDC, BP_PUSHBUTTON, partState,
 			caption, cch, DT_CENTER | DT_VCENTER | DT_SINGLELINE,
-			&rcInter, &opts);
+			&rcPaint, &opts);
 
 		CloseThemeData(hTheme);
 		return true;
@@ -223,7 +221,6 @@ LRESULT CALLBACK SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam,
 {
 	switch (uMsg)
 	{
-
 	case WM_PAINT:
 		{
 			PAINTSTRUCT ps;
@@ -261,6 +258,85 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 
 #define BTN_SUBCLASS_ID 111
 
+std::map<int, COLORREF> GetThemeColors(HTHEME hTheme)
+{
+	static const int colorIds[] = {
+		COLOR_SCROLLBAR,
+		COLOR_BACKGROUND,
+		COLOR_ACTIVECAPTION,
+		COLOR_INACTIVECAPTION,
+		COLOR_MENU,
+		COLOR_WINDOW,
+		COLOR_WINDOWFRAME,
+		COLOR_MENUTEXT,
+		COLOR_WINDOWTEXT,
+		COLOR_CAPTIONTEXT,
+		COLOR_ACTIVEBORDER,
+		COLOR_INACTIVEBORDER,
+		COLOR_APPWORKSPACE,
+		COLOR_HIGHLIGHT,
+		COLOR_HIGHLIGHTTEXT,
+		COLOR_BTNFACE,
+		COLOR_BTNSHADOW,
+		COLOR_GRAYTEXT,
+		COLOR_BTNTEXT,
+		COLOR_INACTIVECAPTIONTEXT,
+		COLOR_BTNHIGHLIGHT,
+#if(WINVER >= 0x0400)
+		COLOR_3DDKSHADOW,
+		COLOR_3DLIGHT,
+		COLOR_INFOTEXT,
+		COLOR_INFOBK,
+#endif
+
+#if(WINVER >= 0x0500)
+		COLOR_HOTLIGHT,
+		COLOR_GRADIENTACTIVECAPTION,
+		COLOR_GRADIENTINACTIVECAPTION,
+#if(WINVER >= 0x0501)
+		COLOR_MENUHILIGHT,
+		COLOR_MENUBAR,
+#endif 
+#endif 
+#if(WINVER >= 0x0400)
+		COLOR_DESKTOP,
+		COLOR_3DFACE,
+		COLOR_3DSHADOW,
+		COLOR_3DHIGHLIGHT,
+		COLOR_3DHILIGHT,
+		COLOR_BTNHILIGHT
+#endif
+	};
+	std::map<int, COLORREF> result;
+	for (int colorId : colorIds)
+	{
+		COLORREF color = GetThemeSysColor(hTheme, colorId);
+		result[colorId] = color;
+	}
+	return result;
+}
+
+std::map<int, COLORREF> GetDarkThemeColors(HWND hParent)
+{
+	std::map<int, COLORREF> result;
+	HWND htmp = CreateWindow(L"button", L"", WS_CHILDWINDOW, 0, 0, 0, 0, hParent, NULL, NULL, NULL);
+	if (htmp)
+	{
+		HRESULT hr = S_OK;
+		hr = SetWindowTheme(htmp, L"DarkMode_Explorer", NULL);
+		if (SUCCEEDED(hr))
+		{
+			if (HTHEME hTheme = OpenThemeData(htmp, L"button"))
+			{
+				result = GetThemeColors(hTheme);
+				CloseThemeData(hTheme);
+			}
+		}
+		DestroyWindow(htmp);
+	}
+	return result;
+}
+
 // Message handler for theme box.
 INT_PTR CALLBACK AboutTheme(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -269,27 +345,30 @@ INT_PTR CALLBACK AboutTheme(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
 	{
 	case WM_INITDIALOG:
 		{
+			//// TODO: Disable visual styles
+			//SetWindowTheme(hDlg, L" ", L" ");
+			g_themeColors = GetDarkThemeColors(hDlg);
 			HWND hButton = GetDlgItem(hDlg, IDOK);
 			// Get theme info
 			HWND hStatic = GetDlgItem(hDlg, IDC_STATIC);
 			BOOL isThemed = IsAppThemed();
+			BOOL isThemeActive = IsThemeActive();
 			WCHAR themeFileName[MAX_PATH] = {};
 			WCHAR colorBuff[MAX_PATH] = {};
 			WCHAR sizeBuff[MAX_PATH] = {};
-			COLORREF color = 0;
 			if (isThemed)
 			{
 				HRESULT hr = GetCurrentThemeName(themeFileName, std::size(themeFileName), colorBuff, std::size(colorBuff), sizeBuff, std::size(sizeBuff));
-				if (HTHEME hTheme = OpenThemeData(hButton, L"button"))
-				{
-					hr = GetThemeColor(hTheme, BP_PUSHBUTTON, PBS_NORMAL, TMT_COLOR, &color);
-					CloseThemeData(hTheme);
-				}
 			}
 
-			TCHAR windowText[MAX_PATH] = {};
-			_stprintf_s(windowText, _T(" isThemed: %d \n themeFileName: %s \n colorBuff: %s \n sizeBuff: %s \n Button Color: %x"),
-				isThemed, themeFileName, colorBuff, sizeBuff, color);
+			TCHAR windowText[1024] = {};
+			_stprintf_s(windowText,
+				_T("Is Theme Active (classic look and feel is off): %d\n")
+				_T("Is App Themed (classic + manifest + compatibility): %d\n")
+				_T("Theme File: %s\n")
+				_T("Color: %s, Size: %s\n")
+				_T("Theme Sys Color (COLOR_BTNFACE): %x\n"),
+				isThemed, isThemeActive, themeFileName, colorBuff, sizeBuff, g_themeColors[COLOR_BTNFACE]);
 			if (hStatic)
 				SetWindowText(hStatic, windowText);
 			// Subclass
