@@ -166,30 +166,77 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
-bool DrawMyControl(HDC hDC, HWND hwndButton, int iState)
+bool DrawMyButton(HDC hDC, RECT rcPaint, HWND hwnd)
 {
-	HTHEME hTheme = OpenThemeData(hwndButton, _T("Button"));
-	if (!hTheme)
-		return false;
+	const COLORREF rgbBlack = 0x00000000;
+	const COLORREF rgbWhite = 0x00FFFFFF;
 
-	RECT rc, rcContent;
-	TCHAR szButtonText[255];
-	HRESULT hr;
-	size_t cch;
+	COLORREF textColor = rgbWhite;
 
-	GetWindowRect(hwndButton, &rc);
-	GetWindowText(hwndButton, szButtonText, std::size(szButtonText));
-	cch = _tcslen(szButtonText);
+	int state = SendMessage(hwnd, BM_GETSTATE, 0, 0);
+	int partState = 0;
+	if (state & BST_FOCUS)
+		partState |= PBS_DEFAULTED;
+	if (state & BST_HOT)
+		partState |= PBS_HOT;
+	if (state & BST_PUSHED)
+		partState |= PBS_PRESSED;
+	if (partState == 0)
+		partState = PBS_NORMAL;
+
+	HRESULT hr = S_OK;
+	HTHEME hTheme = OpenThemeData(hwnd, L"button");
 	if (hTheme)
 	{
-		hr = DrawThemeBackground(hTheme, hDC, BP_PUSHBUTTON, iState, &rc, 0);
-		// Always check your result codes.
-		hr = GetThemeBackgroundContentRect(hTheme, hDC, BP_PUSHBUTTON, iState, &rc, &rcContent);
-		hr = DrawThemeText(hTheme, hDC, BP_PUSHBUTTON, iState, szButtonText, cch, DT_CENTER | DT_VCENTER | DT_SINGLELINE, 0, &rcContent);
+		RECT rcInter = {};
+
+		hr = DrawThemeEdge(hTheme, hDC, BP_PUSHBUTTON, partState,
+			&rcPaint, EDGE_RAISED, BF_RECT | BF_ADJUST, &rcInter);
+
+		DTBGOPTS opts2 = {};
+		opts2.dwSize = sizeof(opts2);
+		hr = DrawThemeBackgroundEx(hTheme, hDC, BP_PUSHBUTTON, partState, &rcInter, &opts2);
+
+		DTTOPTS opts = {};
+		opts.dwSize = sizeof(opts);
+		opts.crText = textColor;
+		opts.dwFlags |= DTT_TEXTCOLOR;
+		WCHAR caption[MAX_PATH];
+		GetWindowText(hwnd, caption, std::size(caption));
+		size_t cch = _tcslen(caption);
+		hr = DrawThemeTextEx(hTheme, hDC, BP_PUSHBUTTON, partState,
+			caption, cch, DT_CENTER | DT_VCENTER | DT_SINGLELINE,
+			&rcInter, &opts);
+
 		CloseThemeData(hTheme);
 		return true;
 	}
+	else
+	{
+		// Draw the control without using visual styles.
+	}
 	return false;
+}
+
+LRESULT CALLBACK SubclassProc(HWND hWnd, UINT uMsg, WPARAM wParam,
+	LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	switch (uMsg)
+	{
+
+	case WM_PAINT:
+		{
+			PAINTSTRUCT ps;
+			HDC hdc = BeginPaint(hWnd, &ps);
+			// All painting occurs here, between BeginPaint and EndPaint.
+			DrawMyButton(hdc, ps.rcPaint, hWnd);
+			//HBRUSH hBlackBrush = (HBRUSH)GetStockObject(BLACK_BRUSH);
+			//FillRect(hdc, &ps.rcPaint, hBlackBrush);
+			EndPaint(hWnd, &ps);
+		}
+		return TRUE;
+	}
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
 
 // Message handler for about box.
@@ -212,6 +259,8 @@ INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 	return (INT_PTR)FALSE;
 }
 
+#define BTN_SUBCLASS_ID 111
+
 // Message handler for theme box.
 INT_PTR CALLBACK AboutTheme(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -220,20 +269,31 @@ INT_PTR CALLBACK AboutTheme(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
 	{
 	case WM_INITDIALOG:
 		{
+			HWND hButton = GetDlgItem(hDlg, IDOK);
+			// Get theme info
 			HWND hStatic = GetDlgItem(hDlg, IDC_STATIC);
 			BOOL isThemed = IsAppThemed();
 			WCHAR themeFileName[MAX_PATH] = {};
 			WCHAR colorBuff[MAX_PATH] = {};
 			WCHAR sizeBuff[MAX_PATH] = {};
+			COLORREF color = 0;
 			if (isThemed)
 			{
 				HRESULT hr = GetCurrentThemeName(themeFileName, std::size(themeFileName), colorBuff, std::size(colorBuff), sizeBuff, std::size(sizeBuff));
+				if (HTHEME hTheme = OpenThemeData(hButton, L"button"))
+				{
+					hr = GetThemeColor(hTheme, BP_PUSHBUTTON, PBS_NORMAL, TMT_COLOR, &color);
+					CloseThemeData(hTheme);
+				}
 			}
+
 			TCHAR windowText[MAX_PATH] = {};
-			_stprintf_s(windowText, _T(" isThemed: %d \n themeFileName: %s \n colorBuff: %s \n sizeBuff: %s"),
-				isThemed, themeFileName, colorBuff, sizeBuff);
+			_stprintf_s(windowText, _T(" isThemed: %d \n themeFileName: %s \n colorBuff: %s \n sizeBuff: %s \n Button Color: %x"),
+				isThemed, themeFileName, colorBuff, sizeBuff, color);
 			if (hStatic)
 				SetWindowText(hStatic, windowText);
+			// Subclass
+			SetWindowSubclass(hButton, &SubclassProc, BTN_SUBCLASS_ID, 0);
 		}
 		return (INT_PTR)TRUE;
 
@@ -242,18 +302,6 @@ INT_PTR CALLBACK AboutTheme(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
 		{
 			EndDialog(hDlg, LOWORD(wParam));
 			return (INT_PTR)TRUE;
-		}
-		break;
-
-	case WM_PAINT:
-		{
-			HDC hdc = GetDC(hDlg);
-			HWND hButton = GetDlgItem(hDlg, IDOK);
-			if (hButton && hdc)
-				DrawMyControl(hdc, hButton, PBS_NORMAL);
-			if (hdc)
-				ReleaseDC(hDlg, hdc);
-			return TRUE;
 		}
 		break;
 	}
