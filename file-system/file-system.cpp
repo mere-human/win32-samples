@@ -240,8 +240,15 @@ void FillListBox(HWND hDlg)
 		_stprintf_s(buffer, _T("PathCanonicalize: ?"));
 	ListBox_AddString(hList, buffer);
 
-	if (GetCurrentDirectory(std::size(path), path) != 0)
-		_stprintf_s(buffer, _T("GetCurrentDirectory: %s"), path);
+	_tcsncpy_s(buffer2, path, std::size(path));
+	if (PathRemoveFileSpec(buffer2))
+		_stprintf_s(buffer, _T("PathRemoveFileSpec: %s"), buffer2);
+	else
+		_stprintf_s(buffer, _T("PathRemoveFileSpec: ?"));
+	ListBox_AddString(hList, buffer);
+
+	if (GetCurrentDirectory(std::size(buffer2), buffer2) != 0)
+		_stprintf_s(buffer, _T("GetCurrentDirectory: %s"), buffer2);
 	else
 		_stprintf_s(buffer, _T("GetCurrentDirectory: ?"));
 	ListBox_AddString(hList, buffer);
