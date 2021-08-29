@@ -59,7 +59,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	return (int)msg.wParam;
 }
 
+void ShowDateTime(HWND hWnd)
+{
+	const TCHAR* title = _T("Date & Time");
+	const TCHAR* fmt = _T("yyyy-MM-dd hh:mm:ss");
+	const TCHAR* localeName = _T("en_US");
+	const DWORD flags = 0;
 
+	SYSTEMTIME dateTime = {};
+	GetLocalTime(&dateTime);
+	TCHAR buffer[MAX_PATH] = {};
+	if (GetDateFormatEx(localeName, flags, &dateTime, fmt, buffer, (int)std::size(buffer), NULL) != 0)
+	{
+		if (GetTimeFormatEx(localeName, flags, &dateTime, buffer, buffer, (int)std::size(buffer)))
+			MessageBox(hWnd, buffer, title, MB_OK);
+		else
+			MessageBox(hWnd, _T("Error: GetTimeFormatEx"), title, MB_OK | MB_ICONERROR);
+	}
+	else
+	{
+		MessageBox(hWnd, _T("Error: GetDateFormatEx"), title, MB_OK | MB_ICONERROR);
+	}
+}
 
 //
 //  FUNCTION: MyRegisterClass()
@@ -140,6 +161,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			break;
 		case IDM_FILE_PATH:
 			DialogBox(hInst, MAKEINTRESOURCE(IDD_PATH_DIALOG), hWnd, CheckPathDlgProc);
+			break;
+		case IDM_DATETIME:
+			ShowDateTime(hWnd);
 			break;
 		case IDM_EXIT:
 			DestroyWindow(hWnd);
