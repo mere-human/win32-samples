@@ -1,6 +1,6 @@
 //{{NO_DEPENDENCIES}}
 // Microsoft Visual C++ generated include file.
-// Used by file-system.rc
+// Used by common.rc
 //
 #define IDC_MYICON                      2
 #define IDD_FILESYSTEM_DIALOG           102
@@ -11,6 +11,7 @@
 #define IDI_FILESYSTEM                  107
 #define IDI_SMALL                       108
 #define IDC_FILESYSTEM                  109
+#define IDC_MAINMENU                    109
 #define IDR_MAINFRAME                   128
 #define IDD_PATH_DIALOG                 129
 #define IDC_PATH_EDIT                   1000

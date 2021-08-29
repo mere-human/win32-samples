@@ -1,4 +1,10 @@
-# file-system
+# common
+
+Common Win32 API samples.
+
+Includes:
+* File-system
+* Date & Time
 
 Check Win32 API functions on a specified path.
 

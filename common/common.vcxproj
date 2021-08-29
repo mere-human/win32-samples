@@ -24,6 +24,7 @@
     <ProjectGuid>{04d21c30-ca1b-413c-86b5-67f2b7455951}</ProjectGuid>
     <RootNamespace>filesystem</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>common</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -140,16 +141,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="file-system.h" />
+    <ClInclude Include="common.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="file-system.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="file-system.rc" />
+    <ResourceCompile Include="common.rc" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="file-system.ico" />
